@@ -5,7 +5,7 @@ use FileHandle;
 use Carp;
 use vars qw($VERSION);
 
-$VERSION = '0.02';
+$VERSION = '0.03';
 
 
 sub TIEHASH {
@@ -209,6 +209,13 @@ suggested this, but thanks!).
 =head1 AUTHOR
 
 Ken Williams (ken@forum.swarthmore.edu)
+
+=head1 COPYRIGHT
+
+Copyright (c) 1998 Ken Williams/Swarthmore College.  All rights reserved.
+
+This library is free software; you can redistribute it and/or
+modify it under the same terms as Perl itself.
 
 =head1 SEE ALSO
 
