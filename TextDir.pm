@@ -2,12 +2,14 @@ package Tie::TextDir;
 
 use strict;
 use File::Spec;
-use FileHandle;
+use File::Temp;
+use Symbol;
 use Fcntl qw(:DEFAULT);
 use Carp;
+use constant HAVE_56 => $] >= 5.006;
 use vars qw($VERSION);
 
-$VERSION = '0.05';
+$VERSION = '0.06';
 
 sub TIEHASH {
   croak "usage: tie(%hash, 'Tie::TextDir', \$path, [mode], [perms])"
@@ -38,7 +40,7 @@ sub TIEHASH {
   $self->{PATH} = $path;
   
   # Get a filehandle and open the directory:
-  $self->{HANDLE} = new FileHandle;
+  $self->{HANDLE} = HAVE_56 ? undef : gensym();
   opendir($self->{HANDLE}, $path) or croak("can't opendir $path: $!");		
   
   return $self;
@@ -54,14 +56,20 @@ sub FETCH {
   my $file = File::Spec->catfile($self->{PATH}, $key);
   return unless -e $file;
 
-  my $fh = new FileHandle($file) or return;  # FileHandle should set $!
-  local $/;
-  return scalar <$fh>;
+  local *FH;
+  unless (open( FH, "< $file" )) {
+    carp "Can't open $file for reading: $!";
+    return;
+  }
+  my $value;
+  sysread FH, $value, ( stat FH )[7];
+  close FH;
+  return $value;
 }
 
 
 sub STORE {
-  my ($self, $key, $value) = @_;
+  my ($self, $key) = (shift, shift);
   my $file = File::Spec->catfile($self->{PATH}, $key);
   croak "No write access for '$file'" unless $self->{MODE} & O_RDWR;
 
@@ -70,10 +78,11 @@ sub STORE {
     return;
   }
 
-  my $fh = new FileHandle(">$file") or croak ("can't open $file: $!");
-  
-  print $fh $value;
+  # Use temp file for writing, and then rename to make the update atomic
+  my ($fh, $tmpname) = File::Temp::tempfile(DIR => $self->{PATH}, CLEANUP => 1);
+  print $fh $_[0];
   close $fh;
+  rename ($tmpname, $file) or croak ("can't rename temp file $tmpname to $file: $!");
 }
 
 
