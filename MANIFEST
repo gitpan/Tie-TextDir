@@ -1,6 +1,8 @@
+Build.PL
 Changes
 MANIFEST
+META.yml
 Makefile.PL
 README
 TextDir.pm
-test.pl
+t/basic.t
