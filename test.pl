@@ -6,7 +6,7 @@
 # Change 1..1 below to 1..last_test_to_print .
 # (It may become useful if the test is moved to ./t subdirectory.)
 
-BEGIN { $| = 1; print "1..2\n"; }
+BEGIN { $| = 1; print "1..8\n"; }
 END {print "not ok 1\n" unless $loaded;}
 use Tie::TextDir;
 $loaded = 1;
@@ -19,22 +19,44 @@ print "ok 1\n";
 # of the test code):
 
 sub report_result {
+	my $ok = shift;
 	$TEST_NUM ||= 2;
-	print ( $_[0] ? "ok $TEST_NUM\n" : "not ok $TEST_NUM\n" );
+	print "not " unless $ok;
+	print "ok $TEST_NUM\n";
+	print "@_\n" if (not $ok and $ENV{TEST_VERBOSE});
 	$TEST_NUM++;
 }
 
-# 1: store and recall
+
+my $dir = "data";
+
+
 {
-	my ($ok, $dir, $val) = (1, '/tmp/TextDir_test', "one line\ntwo lines\nbad stuff\003\005\n");
+	my $val = "one line\ntwo lines\nbad stuff\003\005\n";
 	
-	tie (%hash, 'Tie::TextDir', $dir, 'rw') or do {$ok = 0};
-	$hash{'file'} = $val;
+	# 2: open a database
+	&report_result( tie(%hash, 'Tie::TextDir', $dir, 'rw'), $! );
+
+	# 3: store a value
+	$hash{'key'} = $val;
+	&report_result( $hash{'key'} eq $val, "value is '$hash{'key'}" );
+
 	untie %hash;
 	
-	tie (%hash, 'Tie::TextDir', $dir) or do {$ok = 0};
-	$hash{'file'} eq $val or do {$ok = 0};
-	&report_result($ok);
-	unlink "$dir/file";
-	rmdir $dir;
+	# 4: retie the hash
+	&report_result( tie (%hash, 'Tie::TextDir', $dir), $! );
+
+	# 5: check the stored value
+	&report_result($hash{'key'} eq $val, "value is '$hash{'key'}'");
+
+	# 6: check whether the empty key exists()
+	&report_result(not exists $hash{''});
+	
+	# 7: check whether the . key exists()
+	&report_result(not exists $hash{'.'});
+	
+	# 8: check whether the .. key exists()
+	&report_result(not exists $hash{'..'});
+	
+	untie %hash;
 }

@@ -5,7 +5,7 @@ use FileHandle;
 use Carp;
 use vars qw($VERSION);
 
-$VERSION = '0.01';
+$VERSION = '0.02';
 
 
 sub TIEHASH {
@@ -99,19 +99,19 @@ sub DELETE {
 	my $self = shift @_;
 	my $key	= shift @_;
 	my $file	= $self->{PATH} . "/$key";
-
-	if ( !&_key_okay($key) ) {
+	
+	if ( not &_key_okay($key) ) {
 		carp ("Bad key '$key'");
 		return;
 	}
-
+	
 	unless ($self->{CLOBBER}) {
 		carp ("no write access for key=$key");
 		return;
 	}
-
+	
 	unless (unlink $file) {
-		carp ("Couldn't delete key $key in $self->{PATH}: $!");
+		carp ("Couldn't delete key $self->{PATH}/$key: $!");
 		return;
 	}
 }
@@ -123,7 +123,8 @@ sub CLEAR {
 sub EXISTS {
 	my $self = shift;
 	my $key	= shift;
-
+	
+	return undef if not &_key_okay($key);
 	return (-e "$self->{PATH}/$key");
 }
 
